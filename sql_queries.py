@@ -61,7 +61,7 @@ artist_location    varchar
 
 songplay_table_create = ("""
 CREATE TABLE IF NOT EXISTS songplays (
-songplay_id        integer       not null primary key,
+songplay_id        integer       primary key,
 start_time         timestamp     sortkey,
 user_id            integer,
 level              varchar(30),
