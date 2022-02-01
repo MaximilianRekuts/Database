@@ -140,7 +140,7 @@ staging_songs_copy = ("""copy staging_songs
 # FINAL TABLES
 
 songplay_table_insert = ("""
-                         intsert into songplays(
+                         insert into songplays(
                              start_time,
                              user_id,
                              level,
