@@ -36,7 +36,7 @@ registration      float,
 session_id        integer,
 song              varchar,
 status            integer,
-ts                timestamp,
+ts                bigint,
 user_agent        varchar,
 user_id           integer
 );
