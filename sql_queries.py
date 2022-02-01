@@ -5,6 +5,12 @@ import configparser
 config = configparser.ConfigParser()
 config.read('dwh.cfg')
 
+# GLOBAL VARIABLES
+LOG_DATA = config.get("S3","LOG_DATA")
+LOG_PATH = config.get("S3", "LOG_JSONPATH")
+SONG_DATA = config.get("S3", "SONG_DATA")
+IAM_ROLE = config.get("IAM_ROLE","ARN")
+
 # DROP TABLES
 
 staging_events_table_drop = "DROP TABLE IF EXISTS staging_events"
@@ -61,34 +67,34 @@ artist_location    varchar
 
 songplay_table_create = ("""
 CREATE TABLE IF NOT EXISTS songplays (
-songplay_id        integer       primary key,
-start_time         timestamp     sortkey,
-user_id            integer,
-level              varchar(30),
-song_id            varchar(50)   distkey,
-artist_id          varchar(50),
+songplay_id        integer  identity(0,1) primary key,
+start_time         timestamp not null sortkey,
+user_id            integer not null,
+level              text,
+song_id            text    distkey not null,
+artist_id          text   not null,
 session_id         integer,
-location           varchar(256),
-user_agent         varchar(50)        
+location           text,
+user_agent         text     
 );
 """)
 
 user_table_create = ("""
 CREATE TABLE IF NOT EXISTS users (
-user_id       integer           not null sortkey primary key,
-first_name    varchar(50),
-last_name     varchar(50),
-gender        varchar(20),
-level         varchar(20)     
+user_id       integer   sortkey primary key,
+first_name    text,
+last_name     text,
+gender        text,
+level         text     
 )
 diststyle all;
 """)
 
 song_table_create = ("""
 CREATE TABLE IF NOT EXISTS songs (
-song_id      varchar(50)    not null sortkey primary key,
-title        varchar(256),
-artist_id    varchar(50),
+song_id      text     sortkey primary key not null,
+title        text not null,
+artist_id    text not null,
 year         integer,
 duration     decimal(10, 5)
 )
@@ -97,9 +103,9 @@ diststyle all;
 
 artist_table_create = ("""
 CREATE TABLE IF NOT EXISTS artists (
-artist_id   varchar(50)     not null sortkey primary key,
-name        varchar(256),
-location    varchar(256),
+artist_id   text    not null sortkey primary key,
+name        text,
+location    text,
 lattitude   decimal(20, 4),
 longitude   decimal(20, 4)
 )
@@ -109,12 +115,12 @@ diststyle all;
 time_table_create = ("""
 CREATE TABLE IF NOT EXISTS time (
 start_time      timestamp  not null sortkey primary key,
-hour            integer,
-day             integer,
-week            integer,
-month           integer,
-year            integer,
-weekday         integer
+hour            integer not null,
+day             integer not null,
+week            integer not null,
+month           integer not null,
+year            integer not null,
+weekday         integer not null
 )
 diststyle auto;
 """)
@@ -125,7 +131,6 @@ staging_events_copy = ("""copy staging_events
                           from {}
                           iam_role {}
                           region 'us-west-2'
-                          compupdate off 
                           json {};
                        """).format(config['S3']['LOG_DATA'], config['IAM_ROLE']['ARN'], config['S3']['LOG_JSONPATH'])
 
@@ -133,7 +138,6 @@ staging_songs_copy = ("""copy staging_songs
                           from {} 
                           iam_role {}
                           region 'us-west-2'
-                          compupdate off 
                           json 'auto';
                       """).format(config['S3']['SONG_DATA'], config['IAM_ROLE']['ARN'])
 
@@ -149,21 +153,22 @@ songplay_table_insert = ("""
                              session_id,
                              location,
                              user_agent)
-                         select distinct(
-                             to_timestamp(events.ts::timestamp/1000) as start_time,
-                             events.userId as user_id,
+                         select distinct
+                             timestamp 'epoch' + events.ts/1000 * Interval '1 second',
+                             events.user_id as user_id,
                              events.level as level,
                              songs.song_id as song_id,
                              songs.artist_id as artist_id,
-                             events.sessionId as session_id,
+                             events.session_id as session_id,
                              events.location as location,
-                             events.userAgent as user_agent
+                             events.user_agent as user_agent
                          from 
                              staging_events as events
                          left join 
                              staging_songs as songs
                          on  events.song = songs.title
-                         and events.artist = songs.artist_name;
+                         and events.artist = songs.artist_name
+                         where song_id is not null;
                          """)
 
 user_table_insert = ("""
@@ -174,12 +179,13 @@ user_table_insert = ("""
                          gender,
                          level)
                      select distinct
-                         userId as user_id,
-                         firstName as first_name,
-                         lastName as last_name,
+                         user_id as user_id,
+                         first_name as first_name,
+                         last_name as last_name,
                          gender as gender,
                          level as level
-                     FROM staging_events;
+                     FROM staging_events
+                     WHERE user_id is not null;
                      """)
 
 song_table_insert = ("""
@@ -195,7 +201,8 @@ song_table_insert = ("""
                          artist_id as artist_id,
                          year as year,
                          duration as duration
-                     FROM staging_songs;
+                     FROM staging_songs
+                     WHERE song_id IS NOT NULL;
                      """)
 
 artist_table_insert = ("""
@@ -208,10 +215,11 @@ artist_table_insert = ("""
                        select distinct 
                            artist_id as artist_id,
                            artist_name as name,
-                           location as location,
-                           latitude as latitude,
-                           longitude as longitude
-                       FROM staging_songs;
+                           artist_location as location,
+                           artist_latitude as latitude,
+                           artist_longitude as longitude
+                       FROM staging_songs
+                       WHERE artist_id is not null;
                        """)
 
 time_table_insert = ("""
@@ -223,7 +231,7 @@ time_table_insert = ("""
                          month,
                          year,
                          weekday)
-                     select distinct(
+                     select distinct
                         to_timestamp(events.ts::timestamp/1000) as start_time,
                         extract(hour from start_time) as hour,
                         extract(day from start_time) as day,
