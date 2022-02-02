@@ -3,7 +3,7 @@ import psycopg2
 from sql_queries import create_table_queries, drop_table_queries
 
 
-def drop_tables(cur, conn):
+    def drop_tables(cur, conn):
 """
 this function iterates over the drop table queries and executes
 inputs:
@@ -15,7 +15,7 @@ inputs:
         conn.commit()
 
 
-def create_tables(cur, conn):
+    def create_tables(cur, conn):
 """
 this function iterates over the create table queries and executes
 inputs:
@@ -27,7 +27,7 @@ inputs:
         conn.commit()
 
 
-def main():
+    def main():
 """
 this function connects to the database using the credentials in the config file and then drops and recreates the required tables.
 """
