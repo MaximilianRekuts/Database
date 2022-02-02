@@ -4,7 +4,7 @@ import psycopg2
 from sql_queries import copy_table_queries, insert_table_queries
 
 
-def load_staging_tables(cur, conn):
+    def load_staging_tables(cur, conn):
 """
 iterates over a list of load queries that load the data from the s3 bucket to the stage tables using COPY command
 inputs:
@@ -16,7 +16,7 @@ inputs:
         conn.commit()
 
 
-def insert_tables(cur, conn):
+    def insert_tables(cur, conn):
 """
 iterates over a list of insert queries that insert the data from stage table to final table
 inputs:
@@ -28,7 +28,7 @@ inputs:
         conn.commit()
 
 
-def main():
+    def main():
 """
 reads the db credentials from the config file, connects to the database, loads the s3 files into stage tables, loads the final tables from stage tables and then disconnects from the database
 """
