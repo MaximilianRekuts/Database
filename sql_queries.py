@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS artists (
 artist_id   text    not null sortkey primary key,
 name        text,
 location    text,
-lattitude   decimal(20, 4),
+latitude   decimal(20, 4),
 longitude   decimal(20, 4)
 )
 diststyle all;
@@ -216,7 +216,7 @@ artist_table_insert = ("""
                            artist_id as artist_id,
                            artist_name as name,
                            artist_location as location,
-                           artist_latitude as latitude,
+                           artist_latitude,
                            artist_longitude as longitude
                        FROM staging_songs
                        WHERE artist_id is not null;
@@ -232,7 +232,7 @@ time_table_insert = ("""
                          year,
                          weekday)
                      select distinct
-                        to_timestamp(events.ts::timestamp/1000) as start_time,
+                        timestamp 'epoch' + ts/1000 * Interval '1 second' as start_time,
                         extract(hour from start_time) as hour,
                         extract(day from start_time) as day,
                         extract(week from start_time) as week,
